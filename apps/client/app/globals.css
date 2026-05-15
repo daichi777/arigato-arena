@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =====================================================================
+ *  ArigatoArena グローバル基本スタイル
+ *  - ダーク基調・廃墟ノイズ感
+ *  - ロビー/待機/結果画面ベース
+ * ===================================================================== */
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background-color: theme('colors.ink.950');
+  color: theme('colors.ink.100');
+  font-family: theme('fontFamily.sans');
+  min-height: 100vh;
+}
+
+body {
+  background-image:
+    radial-gradient(1200px 600px at 15% -10%, rgba(74, 141, 227, 0.08), transparent 60%),
+    radial-gradient(1000px 500px at 100% 110%, rgba(227, 74, 74, 0.08), transparent 60%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.018) 0px,
+      rgba(255, 255, 255, 0.018) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  background-attachment: fixed;
+}
+
+/* スクロールバー（ダーク基調） */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: theme('colors.ink.900');
+}
+::-webkit-scrollbar-thumb {
+  background: theme('colors.ink.700');
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: theme('colors.ink.600');
+}
+
+/* リンク・ボタンの focus-visible 統一 */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid theme('colors.accent.red');
+  outline-offset: 2px;
+}
+
+/* 入力フォームの autofill 色潰れ対策 */
+input:-webkit-autofill {
+  box-shadow: 0 0 0 1000px theme('colors.ink.800') inset;
+  -webkit-text-fill-color: theme('colors.ink.100');
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@arigato/server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "partykit dev",
+    "build": "partykit build",
+    "deploy": "partykit deploy",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"no lint configured yet\"",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@arigato/shared": "workspace:*",
+    "partykit": "^0.0.114",
+    "zod": "^3.23.8",
+    "@supabase/supabase-js": "^2.45.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "@types/node": "^22.7.5",
+    "@cloudflare/workers-types": "^4.20240729.0",
+    "vitest": "^2.1.3"
+  }
+}

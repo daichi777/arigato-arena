@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "lib": ["ES2022", "WebWorker"],
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@arigato/shared": ["../../packages/shared/src/index.ts"],
+      "@arigato/shared/*": ["../../packages/shared/src/*"]
+    },
+    "types": ["node", "@cloudflare/workers-types"]
+  },
+  "include": ["src/**/*.ts", "party/**/*.ts", "vitest.config.ts"],
+  "exclude": ["node_modules", "dist", ".partykit"]
+}
