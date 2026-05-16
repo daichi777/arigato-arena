@@ -2,25 +2,33 @@
 
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
+import type { PlayerId } from '@arigato/shared';
 import type { KillFeedEntry } from '../../game/store/gameStore';
 import { useGameStore } from '../../game/store/gameStore';
 import { DEBUG_PANEL_UPDATE_MS } from '../../game/constants';
+import type { RemotePlayerVisual } from '../../game/types';
+import { findCharacter } from '../lobby/characters';
 
 /** 表示の生存時間（受信から ms） */
 const KILL_FEED_TTL_MS = 5_000;
 
+interface Props {
+  /** lobby agent 経由のプレイヤー表示メタ（名前 / characterId 参照に使用） */
+  visuals?: Map<PlayerId, RemotePlayerVisual>;
+}
+
 /**
  * キルフィード（右上）。
  *
- * - 直近 5 件を最大 5 秒間表示。
+ * - 直近 5 件を表示。
  * - 自分が killer の行は黄色、自分が victim の行は赤色。
- * - ヘッドショットには HS バッジ。
+ * - ヘッドショットには HS バッジ（黄色光彩 + スケールアニメ）。
+ * - killer / victim 両方のアバター画像（24x24）と名前を表示。
  */
-export function KillFeedList(): JSX.Element {
+export function KillFeedList({ visuals }: Props): JSX.Element {
   const feed = useGameStore((s) => s.killFeed);
   const yourId = useGameStore((s) => s.yourPlayerId);
 
-  // 表示用キャッシュ。受信から TTL 内のエントリのみ。
   const [now, setNow] = useState(() => performance.now());
 
   useEffect(() => {
@@ -32,60 +40,163 @@ export function KillFeedList(): JSX.Element {
 
   void DEBUG_PANEL_UPDATE_MS;
 
-  // tickMs はサーバー時間。クライアント performance.now と単純比較はできないが、
-  // 「最後に受信した順」に上から積むだけなら、配列長で最近 5 件を取れば十分。
-  // TTL は「ユーザーが眺める時間」基準でクライアント時刻ベースに割り切る。
   const visible: KillFeedEntry[] = feed.slice(-5);
 
   return (
-    <div
+    <>
+      {/* HS バッジアニメ用スタイルシート */}
+      <style>{`
+        @keyframes hs-badge-pop {
+          0% { transform: scale(1.2); }
+          100% { transform: scale(1.0); }
+        }
+        .hs-badge {
+          display: inline-block;
+          background: rgba(255, 200, 0, 0.15);
+          border: 1px solid #ffd86b;
+          color: #ffd86b;
+          font-size: 10px;
+          font-weight: 700;
+          padding: 1px 5px;
+          border-radius: 3px;
+          box-shadow: 0 0 6px 1px rgba(255, 220, 50, 0.5);
+          animation: hs-badge-pop 0.3s ease-out forwards;
+        }
+      `}</style>
+      <div
+        style={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: 4,
+          pointerEvents: 'none',
+          userSelect: 'none',
+          fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+          fontSize: 13,
+        }}
+      >
+        {visible.map((e) => {
+          const isSelfKiller = yourId !== null && e.killerId === yourId;
+          const isSelfVictim = yourId !== null && e.victimId === yourId;
+          const bg = isSelfKiller
+            ? 'rgba(120, 100, 0, 0.75)'
+            : isSelfVictim
+              ? 'rgba(140, 30, 30, 0.75)'
+              : 'rgba(0,0,0,0.6)';
+
+          const killerMeta = visuals?.get(e.killerId);
+          const victimMeta = visuals?.get(e.victimId);
+          const killerChar = findCharacter(killerMeta?.characterId);
+          const victimChar = findCharacter(victimMeta?.characterId);
+          const killerName = killerMeta?.name ?? shortenId(e.killerId);
+          const victimName = victimMeta?.name ?? shortenId(e.victimId);
+
+          return (
+            <div
+              key={e.id}
+              style={{
+                padding: '4px 10px',
+                background: bg,
+                color: '#fff',
+                borderRadius: 5,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 7,
+                border: '1px solid rgba(255,255,255,0.12)',
+                opacity: feedOpacityFromAge(now, e.tickMs),
+              }}
+            >
+              {/* Killer アバター + 名前 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <PlayerAvatar
+                  imagePath={killerChar?.imagePath}
+                  displayName={killerChar?.displayName}
+                />
+                <span style={{ color: isSelfKiller ? '#ffd86b' : '#e8e8e8', fontWeight: 600 }}>
+                  {killerName}
+                </span>
+                {killerChar && (
+                  <span style={{ color: '#999', fontSize: 10 }}>
+                    {killerChar.displayName}
+                  </span>
+                )}
+              </div>
+
+              {/* 武器 + HS バッジ */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ opacity: 0.65, fontSize: 11 }}>
+                  [{e.weapon.toUpperCase()}]
+                </span>
+                {e.isHeadshot && (
+                  <span className="hs-badge">HS</span>
+                )}
+              </div>
+
+              <span style={{ opacity: 0.4 }}>→</span>
+
+              {/* Victim アバター + 名前 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <PlayerAvatar
+                  imagePath={victimChar?.imagePath}
+                  displayName={victimChar?.displayName}
+                />
+                <span style={{ color: isSelfVictim ? '#ff8a8a' : '#ccc' }}>
+                  {victimName}
+                </span>
+                {victimChar && (
+                  <span style={{ color: '#999', fontSize: 10 }}>
+                    {victimChar.displayName}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+// ---- 補助コンポーネント ----
+
+interface PlayerAvatarProps {
+  imagePath?: string;
+  displayName?: string;
+}
+
+function PlayerAvatar({ imagePath, displayName }: PlayerAvatarProps): JSX.Element {
+  if (!imagePath) {
+    return (
+      <div
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: '50%',
+          background: 'rgba(255,255,255,0.15)',
+          flexShrink: 0,
+        }}
+      />
+    );
+  }
+  return (
+    <img
+      src={imagePath}
+      alt={displayName ?? ''}
+      width={24}
+      height={24}
       style={{
-        position: 'absolute',
-        top: 16,
-        right: 16,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-        gap: 4,
-        pointerEvents: 'none',
-        userSelect: 'none',
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-        fontSize: 13,
+        borderRadius: '50%',
+        objectFit: 'cover',
+        border: '1px solid rgba(255,255,255,0.3)',
+        flexShrink: 0,
       }}
-    >
-      {visible.map((e) => {
-        const isSelfKiller = yourId !== null && e.killerId === yourId;
-        const isSelfVictim = yourId !== null && e.victimId === yourId;
-        const bg = isSelfKiller
-          ? 'rgba(120, 100, 0, 0.7)'
-          : isSelfVictim
-            ? 'rgba(140, 30, 30, 0.7)'
-            : 'rgba(0,0,0,0.55)';
-        return (
-          <div
-            key={e.id}
-            style={{
-              padding: '4px 10px',
-              background: bg,
-              color: '#fff',
-              borderRadius: 4,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              opacity: feedOpacityFromAge(now, e.tickMs),
-            }}
-          >
-            <span style={{ color: '#ddd' }}>{shortenId(e.killerId)}</span>
-            <span style={{ opacity: 0.65 }}>
-              [{e.weapon.toUpperCase()}]
-              {e.isHeadshot ? <span style={{ color: '#ffd86b' }}> HS</span> : null}
-            </span>
-            <span style={{ opacity: 0.4 }}>→</span>
-            <span style={{ color: '#fff' }}>{shortenId(e.victimId)}</span>
-          </div>
-        );
-      })}
-    </div>
+      onError={(e) => {
+        (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
+      }}
+    />
   );
 }
 
@@ -94,14 +205,7 @@ function shortenId(id: string): string {
   return id.slice(0, 6) + '…';
 }
 
-/**
- * tickMs はサーバー時間なのでクライアントの now とは絶対比較できない。
- * ここでは fade-out 用に「単に古いエントリほど薄くする」だけの単純な近似を行う。
- * 配列上で末尾ほど新しい前提。
- */
 function feedOpacityFromAge(_clientNow: number, _serverTickMs: number): number {
-  // killFeed は最大 6 件しか保持しないため、見える分は基本 1.0 でよい。
-  // 必要なら server tickMs を performance.now と紐付けるロジックを別途追加すること。
   return 1;
 }
 

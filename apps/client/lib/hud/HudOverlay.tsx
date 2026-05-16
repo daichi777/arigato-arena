@@ -14,6 +14,9 @@ import { RespawnOverlay } from './RespawnOverlay';
 import { DamageFlash } from '../../game/effects/DamageFlash';
 import { HitMarker } from './HitMarker';
 import { CountdownOverlay } from './CountdownOverlay';
+import { SelfAvatar } from './SelfAvatar';
+import { DamageDirectionIndicator } from './DamageDirectionIndicator';
+import { VolumeSettings } from '../audio/VolumeSettings';
 import type { RemotePlayerVisual } from '../../game/types';
 
 interface Props {
@@ -42,11 +45,44 @@ export function HudOverlay({ visuals }: Props): JSX.Element {
 
       {/* 上部 */}
       <MatchTimer />
-      <KillFeedList />
+      <KillFeedList visuals={visuals} />
 
-      {/* 左下 */}
-      <HpBar />
+      {/*
+        左下: SelfAvatar + HpBar を横並びで配置。
+        SelfAvatar(48x48) + gap(8px) + HpBar(240px)
+      */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 24,
+          bottom: 80,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          pointerEvents: 'none',
+        }}
+      >
+        <SelfAvatar visuals={visuals} />
+        <HpBar />
+      </div>
+
+      {/* 左下: AmmoCounter（既存 absolute: left:24, bottom:24） */}
       <AmmoCounter />
+
+      {/* 左下: 音量スライダー（AmmoCounter の上） */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 24,
+          bottom: 148,
+          background: 'rgba(0,0,0,0.45)',
+          borderRadius: 5,
+          padding: '4px 8px',
+          pointerEvents: 'auto',
+        }}
+      >
+        <VolumeSettings />
+      </div>
 
       {/* 右下 */}
       <Minimap visuals={visuals} />
@@ -61,6 +97,7 @@ export function HudOverlay({ visuals }: Props): JSX.Element {
       <DamageFlash />
       <RespawnOverlay />
       <CountdownOverlay />
+      <DamageDirectionIndicator />
     </div>
   );
 }

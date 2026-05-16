@@ -7,6 +7,7 @@ import type { AudioManager } from './AudioManager';
  * 未配置でも AudioManager.preload() は warn のみで握りつぶすため安全。
  */
 const SFX_BASE = '/assets/audio/sfx';
+const BGM_BASE = '/assets/audio/bgm';
 
 export const SOUND_URLS = {
   ar_fire: `${SFX_BASE}/ar_fire.mp3`,
@@ -18,6 +19,7 @@ export const SOUND_URLS = {
   reload: `${SFX_BASE}/reload.mp3`,
   countdown_tick: `${SFX_BASE}/countdown_tick.mp3`,
   countdown_go: `${SFX_BASE}/countdown_go.mp3`,
+  bgm_match: `${BGM_BASE}/match.mp3`,
 } as const;
 
 /** preload リスト（全件） */

@@ -35,9 +35,23 @@ export function MatchTimer(): JSX.Element {
   const mm = Math.floor(totalSec / 60).toString().padStart(2, '0');
   const ss = (totalSec % 60).toString().padStart(2, '0');
   const warn = totalSec <= 30;
+  // 残り 60 秒以下で点滅アニメーション
+  const blinkClass = totalSec <= 60 ? 'timer-blink' : undefined;
 
   return (
     <>
+      {/* 点滅アニメ用スタイル（残り 60 秒以下） */}
+      {blinkClass && (
+        <style>{`
+          @keyframes timer-blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+          }
+          .timer-blink {
+            animation: timer-blink 0.9s ease-in-out infinite;
+          }
+        `}</style>
+      )}
       <div
         style={{
           position: 'absolute',
@@ -68,6 +82,7 @@ export function MatchTimer(): JSX.Element {
           {view.teamKills.red}
         </span>
         <span
+          className={blinkClass}
           style={{
             fontSize: 28,
             fontWeight: 700,

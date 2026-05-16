@@ -20,7 +20,6 @@ interface Props {
 /**
  * 他プレイヤー一覧の描画。
  *
- * 設計:
  * - snapshot から「現在描画対象に含まれる id 集合」を 200ms 間隔で setState 同期する
  *   （マウント・アンマウントの頻度を抑える）。
  * - 位置・回転の更新は useFrameInterpolation 内で Object3D を直接 mutate（再レンダ無し）。
@@ -68,6 +67,9 @@ export function RemotePlayers({ buffer, selfId, visuals }: Props): JSX.Element {
     return () => clearInterval(handle);
   }, [buffer, selfId]);
 
+  // 自分のチームを visuals から取得（チーム色判定に使用）
+  const selfTeam = selfId ? visuals.get(selfId)?.team : undefined;
+
   return (
     <group name="RemotePlayers">
       {knownIds.map((id) => {
@@ -78,6 +80,9 @@ export function RemotePlayers({ buffer, selfId, visuals }: Props): JSX.Element {
             playerId={id}
             name={v?.name}
             team={v?.team}
+            characterId={v?.characterId}
+            selfId={selfId}
+            selfTeam={selfTeam}
             onMount={onMount}
           />
         );

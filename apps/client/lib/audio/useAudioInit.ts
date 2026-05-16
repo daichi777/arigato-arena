@@ -23,6 +23,8 @@ export function useAudioInit(): {
     try {
       await audioManager.init();
       await preloadAll(audioManager);
+      // BGM ループ再生（音声ファイル未配置でも no-op）
+      audioManager.playBgm('bgm_match', 0.13);
     } catch (e) {
       // preloadAll は内部で握りつぶすが、念のため
       console.warn('[useAudioInit] 音声初期化中にエラー:', e);

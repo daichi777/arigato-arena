@@ -157,6 +157,54 @@ export class AudioManager {
       }
     }
   }
+
+  /**
+   * BGM をループ再生する。
+   * 既に同名の BGM が再生中の場合は何もしない。
+   * buffer 未取得（preload 未完了 or 失敗）の場合は無音 (no-op)。
+   *
+   * @param name SoundBank に登録されている BGM 名
+   * @param volume 再生音量（0〜1、デフォルト 0.13）
+   */
+  playBgm(name: string, volume = 0.13): void {
+    const ctx = this.ctx;
+    const gain = this.masterGain;
+    if (!ctx || !gain || ctx.state !== 'running') return;
+
+    const buffer = this.buffers.get(name);
+    if (!buffer) return;
+
+    // 既に再生中なら重複しない
+    const existing = this.activeSources.get(name);
+    if (existing && existing.length > 0) return;
+
+    try {
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+
+      const vol = ctx.createGain();
+      vol.gain.value = Math.max(0, Math.min(1, volume));
+      source.connect(vol);
+      vol.connect(gain);
+
+      source.start(0);
+
+      const list = this.activeSources.get(name) ?? [];
+      list.push(source);
+      this.activeSources.set(name, list);
+
+      source.addEventListener('ended', () => {
+        const current = this.activeSources.get(name);
+        if (current) {
+          const idx = current.indexOf(source);
+          if (idx !== -1) current.splice(idx, 1);
+        }
+      });
+    } catch (e) {
+      console.warn(`[AudioManager] playBgm("${name}") でエラー:`, e);
+    }
+  }
 }
 
 /** シングルトンインスタンス */

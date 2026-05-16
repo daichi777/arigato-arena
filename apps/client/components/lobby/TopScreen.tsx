@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { NameInput } from './NameInput';
+import { VolumeSettings } from '@/lib/audio/VolumeSettings';
 import { closeSocket } from '@/lib/lobby/connection';
 import { loadStoredPlayerName, normalizePlayerName, saveStoredPlayerName } from '@/lib/lobby/player-name';
 import { generateRoomCode, normalizeRoomCode } from '@/lib/lobby/room-code';
@@ -71,7 +72,10 @@ export function TopScreen() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-6 py-12">
+    <main className="relative flex min-h-screen items-center justify-center px-6 py-12">
+      <div className="absolute right-6 top-6">
+        <VolumeSettings />
+      </div>
       <div className="w-full max-w-xl">
         <div className="mb-10 text-center">
           <p className="font-display text-xs tracking-[0.6em] text-ink-400">FPS 5 vs 5 · 3 MIN</p>

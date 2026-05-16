@@ -35,9 +35,6 @@ export function HpBar(): JSX.Element {
   return (
     <div
       style={{
-        position: 'absolute',
-        left: 24,
-        bottom: 80,
         width: 240,
         padding: '8px 12px',
         background: 'rgba(0,0,0,0.55)',

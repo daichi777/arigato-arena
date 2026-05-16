@@ -20,7 +20,7 @@ interface Props {
  * - 右: ホスト用コントロール（シャッフル・開始）
  */
 export function WaitingRoom({ roomCode }: Props) {
-  const { players, teamRed, teamBlue, isHost } = useRoomState();
+  const { players, teamRed, teamBlue, isHost, hostId } = useRoomState();
   const myPlayerId = useLobbyStore((s) => s.myPlayerId);
   const lastError = useLobbyStore((s) => s.lastError);
 
@@ -32,8 +32,8 @@ export function WaitingRoom({ roomCode }: Props) {
   return (
     <section className="grid gap-6 lg:grid-cols-[2fr_3fr_2fr]">
       <div className="space-y-4">
-        <PlayerList title="RED" team="red" players={teamRed} myPlayerId={myPlayerId} />
-        <PlayerList title="BLUE" team="blue" players={teamBlue} myPlayerId={myPlayerId} />
+        <PlayerList title="RED" team="red" players={teamRed} myPlayerId={myPlayerId} hostId={hostId} />
+        <PlayerList title="BLUE" team="blue" players={teamBlue} myPlayerId={myPlayerId} hostId={hostId} />
         <div className="rounded-md border border-ink-800 bg-ink-900 p-3 text-xs text-ink-400">
           <p>ルームコード:</p>
           <p className="mt-1 font-display text-2xl tracking-[0.4em] text-ink-100">{roomCode}</p>

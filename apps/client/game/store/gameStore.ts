@@ -171,6 +171,11 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       if (!s.isAlive && self.isAlive) {
         nextRespawnAtMs = 0;
       }
+      // リロード開始検知: false → true の遷移でリロード音を再生
+      if (!s.isReloading && self.isReloading) {
+        audioManager.play('reload', { volume: 0.5 });
+      }
+
       return {
         hp: self.hp,
         ammoInMag: self.ammoInMag,
