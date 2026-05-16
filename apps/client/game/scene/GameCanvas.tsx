@@ -45,6 +45,9 @@ export function GameCanvas({
       dpr={[1, 2]}
       shadows
     >
+      {/* スカイ背景＋遠景フォグで「黒い闇」を抹消 */}
+      <color attach="background" args={['#3a4a5e']} />
+      <fog attach="fog" args={['#3a4a5e', 60, 120]} />
       <Suspense fallback={null}>
         <Physics gravity={[0, PLAYER_PHYSICS.gravity, 0]} timeStep={1 / 60}>
           <MapScene />

@@ -58,18 +58,18 @@ export function MuzzleFlash({ keysRef }: Props): JSX.Element {
     const k = 1 - t / FLASH_LIFETIME_MS;
     mesh.visible = true;
 
-    // 銃口位置: カメラ位置 + 前方 0.6m + 右下に少しオフセット
+    // 銃口位置: カメラ位置 + 前方 1.2m + 右下に少しオフセット
+    // 1.2m 前方に置くことでカメラ near plane(0.1m) を確実に超え、視野角に対する見かけサイズを抑える
     camera.getWorldDirection(tmp.current);
     mesh.position
       .copy(camera.position)
-      .addScaledVector(tmp.current, 0.6)
-      // カメラ右にオフセット（簡易：右ベクトル = カメラ右）
-      .add(_cameraRight(camera, 0.18))
-      .add(_cameraUp(camera, -0.12));
+      .addScaledVector(tmp.current, 1.2)
+      .add(_cameraRight(camera, 0.32))
+      .add(_cameraUp(camera, -0.22));
     mesh.lookAt(camera.position);
 
-    // ランダムで微妙にサイズ揺らぎ
-    const baseScale = 0.18 + 0.08 * k;
+    // ランダムで微妙にサイズ揺らぎ。視界の片隅で光る程度に抑える。
+    const baseScale = 0.08 + 0.04 * k;
     mesh.scale.setScalar(baseScale * (0.9 + Math.random() * 0.2));
 
     const mat = mesh.material;
