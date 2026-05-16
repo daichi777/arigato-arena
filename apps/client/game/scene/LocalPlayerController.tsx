@@ -23,6 +23,8 @@ import {
 import type { KeyState, LookRef } from '../types';
 import { computeHorizontalVelocity, jumpImpulse } from '../physics/movement';
 import { useGameStore } from '../store/gameStore';
+import { useRecoil } from '../effects/useRecoil';
+import { useCameraShake } from '../effects/useCameraShake';
 
 interface Props {
   keysRef: React.MutableRefObject<KeyState>;
@@ -34,9 +36,10 @@ interface Props {
 /**
  * 自プレイヤーのキャラ + カメラ制御。
  *
- * Day2-C 追加:
- * - `isAlive===false` の間はカメラ操作ロック・移動 disable。
- * - リスポーンしたら直前 snapshot 位置に強制スナップ。
+ * Phase 3 追加:
+ * - useRecoil でリコイル累積値を管理し、look.pitch 適用後に加算
+ * - useCameraShake で被弾時の画面シェイクを適用
+ * - fire の立ち上がりエッジを検出して onFire を呼ぶ
  */
 export function LocalPlayerController({ keysRef, lookRef, team = 'red' }: Props): JSX.Element {
   const bodyRef = useRef<RapierRigidBody>(null);
@@ -47,6 +50,15 @@ export function LocalPlayerController({ keysRef, lookRef, team = 'red' }: Props)
   const tmpVel = useRef(new Vector3());
   // 前フレームの isAlive。死→生 の遷移検知用。
   const prevAliveRef = useRef<boolean>(true);
+  // fire の前フレーム状態（リコイルキック用）
+  const prevFireRef = useRef(false);
+  // 前フレームの lastDamageAt（被弾検知用）
+  const prevDamageAtRef = useRef(0);
+
+  // リコイル
+  const { recoilPitch, onFire, update: updateRecoil } = useRecoil();
+  // カメラシェイク
+  const { onDamage, getShakeOffset } = useCameraShake();
 
   // 初期スポーン位置
   useEffect(() => {
@@ -60,7 +72,7 @@ export function LocalPlayerController({ keysRef, lookRef, team = 'red' }: Props)
     lookRef.current.pitch = 0;
   }, [team, lookRef]);
 
-  useFrame(() => {
+  useFrame((_state, delta) => {
     const body = bodyRef.current;
     if (!body) return;
     const keys = keysRef.current;
@@ -70,6 +82,24 @@ export function LocalPlayerController({ keysRef, lookRef, team = 'red' }: Props)
     const state = useGameStore.getState();
     const isAlive = state.isAlive;
     const selfPos = state.selfPosition;
+    const currentWeapon = state.currentWeapon;
+    const lastDamageAt = state.lastDamageAt;
+
+    // 被弾検知: lastDamageAt が更新されたらシェイク発動
+    if (lastDamageAt !== prevDamageAtRef.current && lastDamageAt > 0) {
+      prevDamageAtRef.current = lastDamageAt;
+      onDamage();
+    }
+
+    // fire 立ち上がりエッジでリコイルキック
+    const fireNow = keys.fire;
+    if (fireNow && !prevFireRef.current) {
+      onFire(currentWeapon);
+    }
+    prevFireRef.current = fireNow;
+
+    // リコイル減衰更新
+    updateRecoil(delta);
 
     // 復活: 死→生 で snapshot 位置にスナップ
     if (!prevAliveRef.current && isAlive && selfPos) {
@@ -135,6 +165,11 @@ export function LocalPlayerController({ keysRef, lookRef, team = 'red' }: Props)
     camera.rotation.x = look.pitch;
     camera.rotation.y = look.yaw;
     camera.rotation.z = 0;
+
+    // --- リコイル + カメラシェイクを後段で加算 ---
+    const shake = getShakeOffset();
+    camera.rotation.x += recoilPitch.current + shake.pitch;
+    camera.rotation.y += shake.yaw;
   });
 
   const initial = SPAWN_POINTS[team][0] ?? { x: 0, y: 0, z: 0 };

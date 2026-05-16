@@ -24,6 +24,12 @@ export type NowFn = () => number;
 export type UuidFn = () => string;
 
 /**
+ * 発砲成功時に呼ばれるコールバック（音声再生などのサイドエフェクト用）。
+ * テスト環境では省略可。
+ */
+export type OnShootFn = (weapon: WeaponType) => void;
+
+/**
  * クライアント側で fire の立ち上がりエッジを検知し、`ClientShoot` をサーバーへ送信する。
  *
  * 送信タイミング:
@@ -56,6 +62,7 @@ export class ShootSender {
     private readonly isPointerLocked: PointerLockedGetter = defaultPointerLocked,
     private readonly now: NowFn = defaultNow,
     private readonly uuid: UuidFn = defaultUuid,
+    private readonly onShoot?: OnShootFn,
   ) {}
 
   start(): void {
@@ -98,13 +105,14 @@ export class ShootSender {
     const prev = this.prevFire;
     // 状態更新は最後にまとめてやる
     let shouldSend = false;
+    // 武器を事前に取得しておく（コールバックで参照するため）
+    const weapon = this.getCurrentWeapon();
 
     if (fireNow && !prev) {
       // 立ち上がりエッジ → 必ず送信（fire interval は無視）
       shouldSend = true;
     } else if (fireNow && prev) {
       // 押下継続中 → 武器ごとの fireIntervalMs に従って送信
-      const weapon = this.getCurrentWeapon();
       const interval = WEAPONS[weapon].fireIntervalMs;
       if (this.now() - this.lastSentAt >= interval) {
         shouldSend = true;
@@ -133,6 +141,12 @@ export class ShootSender {
     };
     this.connection.send(msg);
     this.lastSentAt = this.now();
+
+    // 発砲成功コールバック（音声再生など）
+    if (this.onShoot) {
+      this.onShoot(weapon);
+    }
+
     return msg;
   }
 

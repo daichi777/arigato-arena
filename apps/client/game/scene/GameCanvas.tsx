@@ -9,6 +9,7 @@ import { PLAYER_PHYSICS } from '@arigato/shared';
 import { MapScene } from './MapScene';
 import { LocalPlayerController } from './LocalPlayerController';
 import { RemotePlayers } from './RemotePlayers';
+import { WeaponViewModel } from './WeaponViewModel';
 import { MuzzleFlash } from '../effects/MuzzleFlash';
 import { TracerLine } from '../effects/TracerLine';
 import { HitParticles } from '../effects/HitParticles';
@@ -53,6 +54,9 @@ export function GameCanvas({
           <MapScene />
           <LocalPlayerController keysRef={keysRef} lookRef={lookRef} team={team} />
           <RemotePlayers buffer={snapshotBuffer} selfId={selfId} visuals={visuals} />
+
+          {/* 一人称武器ビューモデル（Phase 3 追加） */}
+          <WeaponViewModel />
 
           {/* エフェクト（state 駆動せず、useFrame 内で ref/Object3D を直接 mutate） */}
           <MuzzleFlash keysRef={keysRef} />

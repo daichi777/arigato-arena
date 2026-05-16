@@ -12,6 +12,8 @@ import { Minimap } from './Minimap';
 import { ReloadGauge } from './ReloadGauge';
 import { RespawnOverlay } from './RespawnOverlay';
 import { DamageFlash } from '../../game/effects/DamageFlash';
+import { HitMarker } from './HitMarker';
+import { CountdownOverlay } from './CountdownOverlay';
 import type { RemotePlayerVisual } from '../../game/types';
 
 interface Props {
@@ -36,6 +38,7 @@ export function HudOverlay({ visuals }: Props): JSX.Element {
     >
       {/* 中央 */}
       <Crosshair />
+      <HitMarker />
 
       {/* 上部 */}
       <MatchTimer />
@@ -57,6 +60,7 @@ export function HudOverlay({ visuals }: Props): JSX.Element {
       {/* フルスクリーン系（オーバーレイ） */}
       <DamageFlash />
       <RespawnOverlay />
+      <CountdownOverlay />
     </div>
   );
 }

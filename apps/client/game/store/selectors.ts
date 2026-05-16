@@ -38,3 +38,10 @@ export const useYourPlayerId = (): string | null =>
   useGameStore((s) => s.yourPlayerId);
 export const usePlayersForMinimap = (): PlayerSnapshot[] =>
   useGameStore((s) => s.playersForMinimap);
+
+// ---- Phase 3 追加 ----
+
+export const useLastHitConfirmAt = (): number =>
+  useGameStore((s) => s.lastHitConfirmAt);
+export const useLastHitConfirmIsHs = (): boolean =>
+  useGameStore((s) => s.lastHitConfirmIsHs);

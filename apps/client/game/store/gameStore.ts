@@ -9,6 +9,7 @@ import type {
   Team,
   Vec3,
 } from '@arigato/shared';
+import { audioManager } from '../../lib/audio/AudioManager';
 
 /**
  * 試合画面用 Zustand store。
@@ -77,6 +78,10 @@ interface GameStoreState {
   lastHitAt: number;
   /** 自分が他人をキルした時刻（performance.now）。Crosshair の赤化に使用。 */
   lastKillByMeAt: number;
+  /** 自分が他人をヒットした時刻（performance.now）。HitMarker に使用。 */
+  lastHitConfirmAt: number;
+  /** 直近ヒットがヘッドショットかどうか。HitMarker 色分けに使用。 */
+  lastHitConfirmIsHs: boolean;
   /** 自分の最新スナップショット位置（Minimap などの DOM 側で使用）。 */
   selfPosition: Vec3 | null;
   /** 自分の最新 yaw（Minimap の向き矢印で使用）。 */
@@ -123,6 +128,8 @@ const initialState: GameStoreState = {
   lastDamageAt: 0,
   lastHitAt: 0,
   lastKillByMeAt: 0,
+  lastHitConfirmAt: 0,
+  lastHitConfirmIsHs: false,
   selfPosition: null,
   selfYaw: 0,
   playersForMinimap: [],
@@ -151,6 +158,8 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       let nextLastDamageAt = s.lastDamageAt;
       if (self.hp < s.hp) {
         nextLastDamageAt = now;
+        // B4: 被弾音再生（AudioManager が未初期化なら no-op）
+        audioManager.play('hurt', { volume: 0.7 });
       }
       // 生→死の遷移を検知してリスポーン時刻を埋める。
       let nextRespawnAtMs = s.respawnAtMs;
@@ -196,10 +205,12 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       const next = [...s.killFeed, entry];
       while (next.length > 6) next.shift();
       // 自分がキルした場合は Crosshair 赤化用タイムスタンプを更新
-      const lastKillByMeAt =
-        s.yourPlayerId !== null && k.killerId === s.yourPlayerId
-          ? nowMs()
-          : s.lastKillByMeAt;
+      const isMyKill = s.yourPlayerId !== null && k.killerId === s.yourPlayerId;
+      const lastKillByMeAt = isMyKill ? nowMs() : s.lastKillByMeAt;
+      // B3: キル音再生
+      if (isMyKill) {
+        audioManager.play('kill', { volume: 0.9 });
+      }
       return { killFeed: next, lastKillByMeAt };
     }),
 
@@ -220,7 +231,29 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
       };
       const next = [...s.recentHits, r];
       while (next.length > RECENT_HITS_CAP) next.shift();
-      return { recentHits: next, lastHitAt: r.receivedAt };
+
+      // 自分が撃者かつ victimId が null でない（壁ではない）場合にヒットマーカー更新
+      const isMyHit =
+        s.yourPlayerId !== null &&
+        h.result.shooterId === s.yourPlayerId &&
+        h.result.victimId !== null;
+      const nextHitConfirmAt = isMyHit ? r.receivedAt : s.lastHitConfirmAt;
+      const nextHitConfirmIsHs = isMyHit ? h.result.isHeadshot : s.lastHitConfirmIsHs;
+
+      // A5 系: ヒットマーカー音再生
+      if (isMyHit) {
+        audioManager.play('hitmark', {
+          volume: 0.6,
+          pitch: h.result.isHeadshot ? 1.2 : 1.0,
+        });
+      }
+
+      return {
+        recentHits: next,
+        lastHitAt: r.receivedAt,
+        lastHitConfirmAt: nextHitConfirmAt,
+        lastHitConfirmIsHs: nextHitConfirmIsHs,
+      };
     }),
 
   markKillBySelf: (_tickMs) => set({ lastKillByMeAt: nowMs() }),

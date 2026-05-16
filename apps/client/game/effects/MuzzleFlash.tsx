@@ -3,37 +3,49 @@
 import { useRef } from 'react';
 import type { JSX } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { AdditiveBlending, type Mesh, Vector3 } from 'three';
-import { PLAYER_PHYSICS } from '@arigato/shared';
+import { AdditiveBlending, type Mesh, type PointLight, Vector3 } from 'three';
 import type { KeyState } from '../types';
 
-/** 1 発の閃光の生存時間（ms） */
-const FLASH_LIFETIME_MS = 60;
+/**
+ * コア閃光の寿命（ms）。
+ * 0-25ms はピーク維持、25-90ms はフェード+スケール拡大。
+ */
+const FLASH_LIFETIME_MS = 90;
+/** PointLight の寿命（ms）。壁・障害物を照らす演出。 */
+const LIGHT_LIFETIME_MS = 70;
 
 interface Props {
-  /** ローカル fire ref。立ち上がりエッジを検出する */
   keysRef: React.MutableRefObject<KeyState>;
 }
 
 /**
- * 自プレイヤーの銃口閃光。
+ * 自プレイヤーの銃口閃光（Phase 3 全面刷新版）。
  *
- * - 自分の fire の立ち上がりエッジで点灯し、`FLASH_LIFETIME_MS` で消える。
- * - カメラ前方に小さな発光プレートを描画（カメラに追従）。
- * - state は使わず、material.opacity と scale を useFrame 内で直接 mutate。
+ * 改善点:
+ * - PointLight (intensity 8, distance 12) で周囲を一瞬照らす
+ * - スプライト多重化: コア閃光 + グレアの 2 枚
+ * - 寿命カーブ: 0-25ms ピーク維持、25-90ms フェード+拡大
+ * - サイズ大幅増加（従来比 2 倍以上）
  */
 export function MuzzleFlash({ keysRef }: Props): JSX.Element {
-  const meshRef = useRef<Mesh>(null);
+  const coreMeshRef = useRef<Mesh>(null);
+  const glareMeshRef = useRef<Mesh>(null);
+  const lightRef = useRef<PointLight>(null);
   const lifetimeStartRef = useRef<number | null>(null);
   const prevFireRef = useRef(false);
   const camera = useThree((s) => s.camera);
 
-  // useFrame 内で使う一時 Vec
-  const tmp = useRef(new Vector3());
+  // useFrame 内 alloc 回避用の一時ベクタ
+  const tmpDir = useRef(new Vector3());
+  const tmpRight = useRef(new Vector3());
+  const tmpUp = useRef(new Vector3());
+  const tmpPos = useRef(new Vector3());
 
   useFrame(() => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
+    const core = coreMeshRef.current;
+    const glare = glareMeshRef.current;
+    const light = lightRef.current;
+    if (!core || !glare || !light) return;
 
     // 立ち上がりエッジ検出
     const fire = keysRef.current.fire;
@@ -47,68 +59,119 @@ export function MuzzleFlash({ keysRef }: Props): JSX.Element {
     const start = lifetimeStartRef.current;
     const nowMs =
       typeof performance !== 'undefined' ? performance.now() : Date.now();
-    const t = start == null ? Infinity : nowMs - start;
+    const elapsed = start == null ? Infinity : nowMs - start;
 
-    if (t >= FLASH_LIFETIME_MS) {
-      mesh.visible = false;
+    if (elapsed >= FLASH_LIFETIME_MS) {
+      core.visible = false;
+      glare.visible = false;
+      light.visible = false;
       return;
     }
 
-    // フェード: 60ms かけて opacity 1→0
-    const k = 1 - t / FLASH_LIFETIME_MS;
-    mesh.visible = true;
+    // 銃口位置計算（カメラ右下オフセット）
+    camera.getWorldDirection(tmpDir.current);
+    // 右ベクトル = カメラ右方向
+    tmpRight.current.set(1, 0, 0).applyQuaternion(camera.quaternion);
+    // 上ベクトル = カメラ上方向
+    tmpUp.current.set(0, 1, 0).applyQuaternion(camera.quaternion);
 
-    // 銃口位置: カメラ位置 + 前方 1.2m + 右下に少しオフセット
-    // 1.2m 前方に置くことでカメラ near plane(0.1m) を確実に超え、視野角に対する見かけサイズを抑える
-    camera.getWorldDirection(tmp.current);
-    mesh.position
+    // 銃口位置: カメラ 1.2m 前 + 右 0.28m + 下 0.18m
+    tmpPos.current
       .copy(camera.position)
-      .addScaledVector(tmp.current, 1.2)
-      .add(_cameraRight(camera, 0.32))
-      .add(_cameraUp(camera, -0.22));
-    mesh.lookAt(camera.position);
+      .addScaledVector(tmpDir.current, 1.2)
+      .addScaledVector(tmpRight.current, 0.28)
+      .addScaledVector(tmpUp.current, -0.18);
 
-    // ランダムで微妙にサイズ揺らぎ。視界の片隅で光る程度に抑える。
-    const baseScale = 0.08 + 0.04 * k;
-    mesh.scale.setScalar(baseScale * (0.9 + Math.random() * 0.2));
+    // ---------- 寿命カーブ ----------
+    // 0-25ms: ピーク (k=1)
+    // 25-90ms: フェード (k: 1→0) + スケール拡大 (1.0→1.2)
+    const PEAK_MS = 25;
+    let k: number;
+    let scaleMult: number;
+    if (elapsed < PEAK_MS) {
+      k = 1.0;
+      scaleMult = 1.0;
+    } else {
+      const t = (elapsed - PEAK_MS) / (FLASH_LIFETIME_MS - PEAK_MS);
+      k = 1.0 - t;
+      scaleMult = 1.0 + t * 0.2; // 1.0→1.2 に拡大
+    }
 
-    const mat = mesh.material;
-    if (Array.isArray(mat)) return;
-    if ('opacity' in mat) {
-      mat.opacity = k;
+    // ランダムゆらぎ（毎フレーム少し揺らす）
+    const jitter = 0.9 + Math.random() * 0.2;
+
+    // ---------- コア閃光 ----------
+    const coreBaseScale = 0.18;
+    core.visible = true;
+    core.position.copy(tmpPos.current);
+    core.lookAt(camera.position);
+    core.scale.setScalar(coreBaseScale * scaleMult * jitter);
+    const coreMat = core.material;
+    if (!Array.isArray(coreMat) && 'opacity' in coreMat) {
+      coreMat.opacity = k;
+    }
+
+    // ---------- グレア（大きく薄く） ----------
+    const glareBaseScale = 0.45;
+    glare.visible = true;
+    glare.position.copy(tmpPos.current);
+    glare.lookAt(camera.position);
+    glare.scale.setScalar(glareBaseScale * scaleMult * jitter);
+    const glareMat = glare.material;
+    if (!Array.isArray(glareMat) && 'opacity' in glareMat) {
+      glareMat.opacity = k * 0.6;
+    }
+
+    // ---------- PointLight ----------
+    if (elapsed < LIGHT_LIFETIME_MS) {
+      // 70ms 以内は点灯
+      const lightFade = 1.0 - elapsed / LIGHT_LIFETIME_MS;
+      light.visible = true;
+      light.position.copy(tmpPos.current);
+      light.intensity = 8.0 * lightFade;
+    } else {
+      light.visible = false;
     }
   });
 
   return (
-    <mesh ref={meshRef} visible={false} renderOrder={20}>
-      <planeGeometry args={[1, 1]} />
-      <meshBasicMaterial
-        color={'#fff2a8'}
-        transparent
-        opacity={0}
-        blending={AdditiveBlending}
-        depthWrite={false}
+    <group>
+      {/* PointLight: 周囲の壁・障害物を一瞬照らす */}
+      <pointLight
+        ref={lightRef}
+        visible={false}
+        color="#ffd070"
+        intensity={0}
+        distance={12}
+        decay={2}
+        castShadow={false}
       />
-    </mesh>
+
+      {/* コア閃光: 白っぽい小さな強い輝点 */}
+      <mesh ref={coreMeshRef} visible={false} renderOrder={21}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial
+          color="#fffbe0"
+          transparent
+          opacity={0}
+          blending={AdditiveBlending}
+          depthWrite={false}
+          depthTest={false}
+        />
+      </mesh>
+
+      {/* グレア: オレンジ寄りの大きな発光ブロブ */}
+      <mesh ref={glareMeshRef} visible={false} renderOrder={20}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial
+          color="#ffb83a"
+          transparent
+          opacity={0}
+          blending={AdditiveBlending}
+          depthWrite={false}
+          depthTest={false}
+        />
+      </mesh>
+    </group>
   );
-}
-
-// PLAYER_PHYSICS import を「使用済み」にしておく（将来 head 高で補正する想定）
-void PLAYER_PHYSICS;
-
-// カメラ右ベクトル（World 空間）。tmp 不使用にするため小さい new Vector3 を返す。
-function _cameraRight(
-  camera: import('three').Camera,
-  scale: number,
-): Vector3 {
-  const v = new Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-  return v.multiplyScalar(scale);
-}
-
-function _cameraUp(
-  camera: import('three').Camera,
-  scale: number,
-): Vector3 {
-  const v = new Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
-  return v.multiplyScalar(scale);
 }

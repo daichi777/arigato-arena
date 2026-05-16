@@ -35,13 +35,49 @@ ArigatoArena で使用するサードパーティ素材・生成AI出力のク�
 
 ## 音声
 
-### キル音
-- 出典: 未定
-- ライセンス: 未定
+### Kenney Sci-Fi Sounds
+- 用途: 武器発砲音 (AR / SG / SMG) / ヒットマーカー音
+- 出典: https://kenney.nl/assets/sci-fi-sounds
+- ライセンス: CC0 (Public Domain)
+- 作者: Kenney Vleugels (kenney.nl)
+- 採用日: 2026-05-16
+- 素材→配置対応:
+  - laserLarge_000.ogg → assets/audio/sfx/ar_fire.mp3
+  - explosionCrunch_000.ogg → assets/audio/sfx/sg_fire.mp3
+  - laserSmall_000.ogg → assets/audio/sfx/smg_fire.mp3
+  - impactMetal_000.ogg → assets/audio/sfx/hitmark.mp3
+- 変換: ogg→mp3 (libmp3lame -q:a 4), loudnorm=I=-16:LRA=11:TP=-1.5
 
-### BGM
-- 出典: 未定（生成 or フリー素材）
-- ライセンス: 未定
+### Kenney Impact Sounds
+- 用途: 被弾音 / リロード音
+- 出典: https://kenney.nl/assets/impact-sounds
+- ライセンス: CC0 (Public Domain)
+- 作者: Kenney Vleugels (kenney.nl)
+- 採用日: 2026-05-16
+- 素材→配置対応:
+  - impactPunch_heavy_000.ogg → assets/audio/sfx/hurt.mp3
+  - impactMetal_heavy_000.ogg → assets/audio/sfx/reload.mp3
+- 変換: ogg→mp3 (libmp3lame -q:a 4), loudnorm=I=-16:LRA=11:TP=-1.5
+
+### Kenney Interface Sounds
+- 用途: キル音 / カウントダウン音
+- 出典: https://kenney.nl/assets/interface-sounds
+- ライセンス: CC0 (Public Domain)
+- 作者: Kenney Vleugels (kenney.nl)
+- 採用日: 2026-05-16
+- 素材→配置対応:
+  - confirmation_001.ogg → assets/audio/sfx/kill.mp3
+  - tick_001.ogg → assets/audio/sfx/countdown_tick.mp3
+  - confirmation_004.ogg → assets/audio/sfx/countdown_go.mp3
+- 変換: ogg→mp3 (libmp3lame -q:a 4), loudnorm=I=-16:LRA=11:TP=-1.5
+
+### BGM プレースホルダ
+- 用途: BGMループ (SFX placeholder)
+- 出典: ローカル生成（ffmpeg anullsrc, 0.1秒無音 44.1kHz stereo）
+- ライセンス: -
+- 配置: assets/audio/bgm/bgm_loop.mp3
+- 採用日: 2026-05-16
+- 注記: 後日 CC0 BGM（Pixabay Music 等）に差し替え予定
 
 ## 注意
 

@@ -17,6 +17,8 @@ import { useFixedRateLoop } from './hooks/useFixedRateLoop';
 import { useGameStore } from './store/gameStore';
 import { INPUT_SEND_INTERVAL_MS } from './constants';
 import type { RemotePlayerVisual } from './types';
+import { useAudioInit } from '../lib/audio/useAudioInit';
+import { audioManager } from '../lib/audio/AudioManager';
 
 // GameCanvas は WebGL を必要とするため SSR を切る。
 const GameCanvas = dynamic(() => import('./scene/GameCanvas.js').then((m) => m.GameCanvas), {
@@ -65,6 +67,7 @@ export default function GameView({
   const keysRef = useKeyboard();
   const lookRef = useMouseLook();
   const { locked, request } = usePointerLock();
+  const { initAudio } = useAudioInit();
 
   // Snapshot バッファは GameView の生存期間中安定参照
   const snapshotBuffer = useMemo(() => new SnapshotBuffer(), []);
@@ -181,6 +184,13 @@ export default function GameView({
       lookRef,
       localPositionRef,
       () => currentWeaponRef.current,
+      undefined, // isPointerLocked: デフォルト
+      undefined, // now: デフォルト
+      undefined, // uuid: デフォルト
+      // B2: 発砲成功時に発砲音を再生
+      (weapon) => {
+        audioManager.play(`${weapon}_fire`, { volume: 0.8 });
+      },
     );
     shootSenderRef.current = sender;
     sender.start();
@@ -191,9 +201,11 @@ export default function GameView({
   }, [connection, keysRef, lookRef]);
 
   // pointer lock 解除中は HUD が薄暗くなる（クリック誘導）
+  // ユーザーのクリックジェスチャで AudioContext も初期化（autoplay policy 対策）
   const onClickOverlay = useCallback(() => {
+    void initAudio();
     request();
-  }, [request]);
+  }, [initAudio, request]);
 
   // 接続切断時のフォールバック UI
   useFixedRateLoop(
