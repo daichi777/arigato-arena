@@ -55,6 +55,21 @@ supabase/.temp/
 assets/characters/*.glb.backup
 assets/**/*.glb.tmp
 
+# Asset generation intermediates (DO NOT COMMIT)
+assets/characters/_source/**/b64.txt
+assets/characters/_source/**/datauri.txt
+assets/characters/_source/**/reference_b64.txt
+assets/characters/_source/**/reference_256.jpg
+assets/characters/_source/**/reference_512.png
+assets/characters/_source/**/reference_01.png
+assets/characters/_source/**/generated_v1.png
+assets/characters/_source/**/generated_v2_sample.png
+assets/characters/_source/**/turnaround_v3.png
+assets/characters/_source/**/turnaround_v2_legacy.png
+
+# Junction/symlink content (apps/client/public/assets -> assets/)
+apps/client/public/assets/
+
 # OS
 Thumbs.db
 ehthumbs.db

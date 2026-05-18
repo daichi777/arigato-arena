@@ -184,7 +184,8 @@ const MatchResultSchema = z.object({
 
 const RoomStateSchema = z.object({
   code: RoomCodeSchema,
-  hostId: PlayerIdSchema,
+  // hostId は無人 / ホスト全員切断時に '' になりうるので min(1) 制約は外す
+  hostId: z.string(),
   phase: RoomPhaseSchema,
   players: z.record(PlayerIdSchema, PlayerStateSchema),
   matchStartMs: z.number(),

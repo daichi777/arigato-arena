@@ -35,12 +35,12 @@ export function MatchTimer(): JSX.Element {
   const mm = Math.floor(totalSec / 60).toString().padStart(2, '0');
   const ss = (totalSec % 60).toString().padStart(2, '0');
   const warn = totalSec <= 30;
-  // 残り 60 秒以下で点滅アニメーション
-  const blinkClass = totalSec <= 60 ? 'timer-blink' : undefined;
+  // 残り 10 秒以下で点滅アニメーション
+  const blinkClass = totalSec > 0 && totalSec <= 10 ? 'timer-blink' : undefined;
 
   return (
     <>
-      {/* 点滅アニメ用スタイル（残り 60 秒以下） */}
+      {/* 点滅アニメ用スタイル（残り 10 秒以下） */}
       {blinkClass && (
         <style>{`
           @keyframes timer-blink {

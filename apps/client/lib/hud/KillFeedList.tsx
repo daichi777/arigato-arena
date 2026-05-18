@@ -40,7 +40,10 @@ export function KillFeedList({ visuals }: Props): JSX.Element {
 
   void DEBUG_PANEL_UPDATE_MS;
 
-  const visible: KillFeedEntry[] = feed.slice(-5);
+  // TTL を過ぎたエントリは表示しない（store からは即時に消さず、表示側で filter）
+  const visible: KillFeedEntry[] = feed
+    .filter((e) => now - e.receivedAt < KILL_FEED_TTL_MS)
+    .slice(-5);
 
   return (
     <>
@@ -106,7 +109,7 @@ export function KillFeedList({ visuals }: Props): JSX.Element {
                 alignItems: 'center',
                 gap: 7,
                 border: '1px solid rgba(255,255,255,0.12)',
-                opacity: feedOpacityFromAge(now, e.tickMs),
+                opacity: feedOpacityFromAge(now, e.receivedAt),
               }}
             >
               {/* Killer アバター + 名前 */}
@@ -205,8 +208,16 @@ function shortenId(id: string): string {
   return id.slice(0, 6) + '…';
 }
 
-function feedOpacityFromAge(_clientNow: number, _serverTickMs: number): number {
-  return 1;
+/**
+ * クライアント受信からの経過時間 (ms) に応じた表示 opacity。
+ * - 0〜(TTL-1000)ms: opacity 1
+ * - (TTL-1000)〜TTL ms: 1 → 0 へリニアフェード
+ * - TTL ms 超: 0（ただし表示側でも filter で除外）
+ */
+function feedOpacityFromAge(clientNow: number, receivedAt: number): number {
+  const age = clientNow - receivedAt;
+  if (age >= KILL_FEED_TTL_MS) return 0;
+  const fadeStart = KILL_FEED_TTL_MS - 1_000;
+  if (age <= fadeStart) return 1;
+  return Math.max(0, (KILL_FEED_TTL_MS - age) / 1_000);
 }
-
-void KILL_FEED_TTL_MS;

@@ -15,8 +15,8 @@ export const INPUT_RATE_LIMIT_HZ = 30; // これを超える受信頻度は破�
 
 export const COUNTDOWN_SECONDS = 3;
 export const MATCH_DURATION_MS = 180_000; // 3分
-export const RESPAWN_DELAY_MS = 3_000;
-export const SPAWN_INVINCIBLE_MS = 2_000;
+export const RESPAWN_DELAY_MS = 2_000;
+export const SPAWN_INVINCIBLE_MS = 1_500;
 
 export const ROOM_MAX_PLAYERS = 10;
 export const ROOM_TEAM_SIZE = 5;
@@ -61,7 +61,7 @@ export const SPAWN_POINTS: Record<Team, readonly Vec3[]> = {
 
 export const PLAYER_PHYSICS = {
   walkSpeed: 5.0, // m/s
-  sprintSpeed: 8.0, // m/s
+  sprintSpeed: 9.0, // m/s
   jumpVelocity: 6.0, // m/s
   gravity: -20.0, // m/s²
   airControlFactor: 0.4, // 空中での加速減衰
@@ -70,7 +70,7 @@ export const PLAYER_PHYSICS = {
   capsuleHeight: 1.8,
   /** 立位の頭中心 */
   headHeight: 1.65,
-  headRadius: 0.15,
+  headRadius: 0.18,
   /** 胴体中心 */
   bodyHeight: 1.0,
   bodyRadius: 0.4,
@@ -105,10 +105,10 @@ export interface WeaponConfig {
 
 export const WEAPONS: Record<WeaponType, WeaponConfig> = {
   ar: {
-    damage: 25,
+    damage: 20,
     pellets: 1,
-    fireIntervalMs: 100, // 600rpm
-    spread: 0.01,
+    fireIntervalMs: 100,
+    spread: 0.012,
     magSize: 30,
     reloadTimeMs: 2200,
     maxRange: 60,
@@ -116,26 +116,26 @@ export const WEAPONS: Record<WeaponType, WeaponConfig> = {
     rangeDropoffMin: 0.7,
   },
   sg: {
-    damage: 15, // ペレット1発あたり
+    damage: 18, // ペレット1発あたり
     pellets: 8,
-    fireIntervalMs: 700, // ~85rpm
-    spread: 0.12,
+    fireIntervalMs: 550,
+    spread: 0.10,
     magSize: 6,
-    reloadTimeMs: 2800,
-    maxRange: 20,
+    reloadTimeMs: 2600,
+    maxRange: 18,
     rangeDropoffStart: 6,
-    rangeDropoffMin: 0.3,
+    rangeDropoffMin: 0.25,
   },
   smg: {
-    damage: 18,
+    damage: 22,
     pellets: 1,
-    fireIntervalMs: 67, // ~900rpm
-    spread: 0.03,
+    fireIntervalMs: 70,
+    spread: 0.035,
     magSize: 25,
     reloadTimeMs: 1800,
-    maxRange: 40,
-    rangeDropoffStart: 15,
-    rangeDropoffMin: 0.5,
+    maxRange: 35,
+    rangeDropoffStart: 10,
+    rangeDropoffMin: 0.4,
   },
 };
 

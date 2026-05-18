@@ -9,6 +9,7 @@ import type {
   Team,
   Vec3,
 } from '@arigato/shared';
+import { RESPAWN_DELAY_MS } from '@arigato/shared';
 import { audioManager } from '../../lib/audio/AudioManager';
 
 /**
@@ -25,7 +26,10 @@ export interface KillFeedEntry {
   victimId: PlayerId;
   weapon: ServerKillFeed['weapon'];
   isHeadshot: boolean;
+  /** サーバー時刻 ms（イベント順序確認用） */
   tickMs: number;
+  /** クライアント受信時刻 performance.now() ms。TTL フェード計算に使う。 */
+  receivedAt: number;
 }
 
 /**
@@ -138,8 +142,14 @@ const initialState: GameStoreState = {
 
 /** 直近ヒットを何件まで保持するか（エフェクト寿命より十分長く） */
 const RECENT_HITS_CAP = 16;
-/** リスポーン遅延（performance.now 基準で respawnAtMs を埋める時のフォールバック） */
-const RESPAWN_FALLBACK_MS = 3_000;
+/** キルフィード保持件数（表示は最新 KILL_FEED_DISPLAY_MAX 件） */
+const KILL_FEED_DISPLAY_MAX = 5;
+/**
+ * リスポーン UI のフォールバック時間（performance.now 基準で respawnAtMs を埋めるのに使用）。
+ * サーバーの RESPAWN_DELAY_MS にネット遅延バッファを上乗せして UI を「やや余裕を持って待たせる」
+ * → 実際の復活が UI 表示より僅かに早くなり、ユーザー体感の「いきなり生き返った」感が出にくい。
+ */
+const RESPAWN_FALLBACK_MS = RESPAWN_DELAY_MS + 200;
 
 function nowMs(): number {
   return typeof performance !== 'undefined' ? performance.now() : Date.now();
@@ -206,9 +216,10 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
         weapon: k.weapon,
         isHeadshot: k.isHeadshot,
         tickMs: k.tickMs,
+        receivedAt: nowMs(),
       };
       const next = [...s.killFeed, entry];
-      while (next.length > 6) next.shift();
+      while (next.length > KILL_FEED_DISPLAY_MAX) next.shift();
       // 自分がキルした場合は Crosshair 赤化用タイムスタンプを更新
       const isMyKill = s.yourPlayerId !== null && k.killerId === s.yourPlayerId;
       const lastKillByMeAt = isMyKill ? nowMs() : s.lastKillByMeAt;
@@ -220,7 +231,8 @@ export const useGameStore = create<GameStoreState & GameStoreActions>((set) => (
     }),
 
   pushHitEvent: (_h) => {
-    // 互換のため残置。実エフェクト記録は recordHit。
+    // no-op: 互換のため interface に残置。実エフェクト記録は recordHit 側で行う。
+    // 削除すると GameView の dispatch 側を全面差し替える必要があり、本番直前に影響を出さないため残す。
   },
 
   recordHit: (h) =>

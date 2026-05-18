@@ -23,25 +23,25 @@ describe('distanceMultiplier', () => {
 });
 
 describe('computeDamage', () => {
-  it('AR の胴撃ち（近距離）は damage = 25 × 1.0', () => {
-    expect(computeDamage('ar', 'body', 0)).toBe(25);
+  it('AR の胴撃ち（近距離）は damage × 1.0', () => {
+    expect(computeDamage('ar', 'body', 0)).toBe(Math.round(WEAPONS.ar.damage * BODY_DAMAGE_MULTIPLIER.body));
   });
 
-  it('AR のヘッド（近距離）は 25 × 2.0 = 50', () => {
-    expect(computeDamage('ar', 'head', 0)).toBe(50);
+  it('AR のヘッド（近距離）は damage × 2.0', () => {
+    expect(computeDamage('ar', 'head', 0)).toBe(Math.round(WEAPONS.ar.damage * BODY_DAMAGE_MULTIPLIER.head));
   });
 
-  it('AR の脚（近距離）は 25 × 0.7 = 17.5 → 18（四捨五入）', () => {
-    expect(computeDamage('ar', 'leg', 0)).toBe(Math.round(25 * BODY_DAMAGE_MULTIPLIER.leg));
+  it('AR の脚（近距離）は damage × 0.7（四捨五入）', () => {
+    expect(computeDamage('ar', 'leg', 0)).toBe(Math.round(WEAPONS.ar.damage * BODY_DAMAGE_MULTIPLIER.leg));
   });
 
-  it('AR maxRange 距離での胴撃ちは 25 × 0.7 = 17.5 → 18', () => {
+  it('AR maxRange 距離での胴撃ちは damage × rangeDropoffMin', () => {
     const d = computeDamage('ar', 'body', WEAPONS.ar.maxRange);
-    expect(d).toBe(Math.round(25 * WEAPONS.ar.rangeDropoffMin));
+    expect(d).toBe(Math.round(WEAPONS.ar.damage * BODY_DAMAGE_MULTIPLIER.body * WEAPONS.ar.rangeDropoffMin));
   });
 
-  it('SG ペレット 1 発分の胴撃ち（近距離）は 15', () => {
-    expect(computeDamage('sg', 'body', 0)).toBe(15);
+  it('SG ペレット 1 発分の胴撃ち（近距離）は damage × 1.0', () => {
+    expect(computeDamage('sg', 'body', 0)).toBe(Math.round(WEAPONS.sg.damage * BODY_DAMAGE_MULTIPLIER.body));
   });
 
   it('SMG 遠距離ヘッドは下限張り付き', () => {

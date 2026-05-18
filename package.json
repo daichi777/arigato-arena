@@ -15,9 +15,11 @@
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "asset:audit": "node scripts/asset-audit.mjs",
+    "glb:audit": "node scripts/glb-audit.mjs",
     "assets:link": "node scripts/link-assets.mjs",
     "postinstall": "node scripts/link-assets.mjs",
-    "clean": "pnpm -r exec rm -rf node_modules dist .next .turbo"
+    "clean": "pnpm -r exec rm -rf node_modules dist .next .turbo",
+    "deploy:server": "pnpm --filter @arigato/server deploy"
   },
   "devDependencies": {
     "typescript": "^5.6.3",
